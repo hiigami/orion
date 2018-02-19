@@ -8,7 +8,8 @@ HEADLINES_KEYS = [
     "downs",
     "title",
     "ups",
-    "num_comments"
+    "num_comments",
+    "created_utc"
 ]
 
 COMMENTS_KEYS = [
