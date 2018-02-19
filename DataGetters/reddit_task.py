@@ -1,19 +1,14 @@
 import os
 import time
-from os.path import dirname, join
 
-from dotenv import load_dotenv
-
-from reddit.core import Reddit
-from reddit.models.credentials import Credentials
-from reddit.models.thingamajig import (
+from .reddit.core import Reddit
+from .reddit.models.credentials import Credentials
+from .reddit.models.thingamajig import (
     ThingAMaJig, COMMENTS_KEYS, HEADLINES_KEYS)
 
 
-if __name__ == '__main__':
-    dotenv_path = join(dirname(__file__), 'config/.env')
-    load_dotenv(dotenv_path)
-
+def main():
+    # TODO (hiigami) Add save/update in db method for headlines and comments.
     SLEEP = int(os.environ.get("REDDIT_SLEEP"))
 
     credentials = Credentials(os.environ.get("REDDIT_USERNAME"),
