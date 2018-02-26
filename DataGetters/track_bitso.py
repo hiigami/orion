@@ -12,6 +12,7 @@ def save(filename, data):
 def save_ticker(t):
   data = api.get_ticker()
   data['date'] = t
+  # ToDo - Just save last, ask and bid properties
   save('tickers.txt', data)
 
 def save_order_book(t):
