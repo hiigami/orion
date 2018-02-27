@@ -100,5 +100,10 @@ ENV/
 # mypy
 .mypy_cache/
 
+# Environments
+.env
+env.sh
+!.env.example
+
 # Vs Code
 .vscode/
