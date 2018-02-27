@@ -104,3 +104,6 @@ ENV/
 .env
 env.sh
 !.env.example
+
+# Vs Code
+.vscode/
