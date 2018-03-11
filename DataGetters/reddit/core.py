@@ -1,24 +1,27 @@
 import platform
 import time
 from datetime import datetime, timedelta
+from typing import Any, Dict, Tuple
 
-from utils.requests import Request
+from utils.request import Request
+
+from .models.credentials import Credentials
 
 
 class Reddit(object):
 
-    def __init__(self, credentials):
-        self._token = None
-        self._token_url = "https://www.reddit.com/api/v1/access_token"
-        self._credentials = credentials
+    def __init__(self, credentials: Credentials) -> None:
+        self._token: Dict[str, Any] = None
+        self._token_url: str = "https://www.reddit.com/api/v1/access_token"
+        self._credentials: Credentials = credentials
 
-    def _user_agent(self):
+    def _user_agent(self) -> str:
         return "{0}:{1}:{2} (by /u/{3})".format(platform.system(),
                                                 self._credentials.app_id,
                                                 self._credentials.version,
                                                 self._credentials.username)
 
-    def _header(self, include_token=True):
+    def _header(self, include_token: bool = True) -> Dict[str, str]:
         headers = {
             "User-Agent": self._user_agent()
         }
@@ -27,22 +30,22 @@ class Reddit(object):
                                                         self._token["access_token"])
         return headers
 
-    def _auth(self):
+    def _auth(self) -> Tuple[str, str]:
         return (self._credentials.client_id, self._credentials.client_secret)
 
-    def _request(self, url, data=None, method="GET"):
+    def _request(self, url: str, data: dict=None, method: str="GET") -> Dict[str, Any]:
         return Request.run(url,
                            method,
                            data,
                            self._header(),
                            self._auth())
 
-    def _is_logged(self):
+    def _is_logged(self) -> bool:
         if self._token is not None and self._token['expires_date'] < datetime.now():
             return True
         return False
 
-    def login(self):
+    def login(self) -> bool:
         if self._is_logged():
             return True
 
@@ -60,14 +63,14 @@ class Reddit(object):
             return True
         return False
 
-    def headlines(self, subreddit, limit, sort="new"):
+    def headlines(self, subreddit: str, limit: int, sort: str="new") -> Dict[str, Any]:
         url = "https://www.reddit.com/r/{0}/{1}/.json?limit={2}" \
             .format(subreddit,
                     sort,
                     limit)
         return self._request(url)
 
-    def comments(self, subreddit, comment_id, limit):
+    def comments(self, subreddit: str, comment_id: str, limit: int) -> Dict[str, Any]:
         url = "https://www.reddit.com/r/{0}/comments/{1}/.json?limit={2}" \
             .format(subreddit,
                     comment_id,

@@ -107,3 +107,6 @@ env.sh
 
 # Vs Code
 .vscode/
+
+# pickle
+*.pkl
