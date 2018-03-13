@@ -1,4 +1,6 @@
-HEADLINES_KEYS = [
+from typing import Any, Dict, List, Tuple
+
+HEADLINES_KEYS: Tuple[str, ...] = (
     "domain",
     "subreddit_id",
     "id",
@@ -9,10 +11,10 @@ HEADLINES_KEYS = [
     "title",
     "ups",
     "num_comments",
-    "created_utc"
-]
+    "created_utc",
+)
 
-COMMENTS_KEYS = [
+COMMENTS_KEYS: Tuple[str, ...] = (
     "created_utc",
     "subreddit_id",
     "id",
@@ -24,12 +26,12 @@ COMMENTS_KEYS = [
     "ups",
     "author",
     "controversiality",
-    "depth"
-]
+    "depth",
+)
 
 
 class ThingAMaJig (object):
-    def __init__(self, keys):
+    def __init__(self, keys: Tuple[str, ...]) -> None:
         self._wanted_keys = keys
 
     def _append_items_from_list(self, items, obj):
@@ -63,10 +65,12 @@ class ThingAMaJig (object):
                     _data.append(item)
         return _data
 
-    def embody(self, data):
+    def embody(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        _data: List[Dict[str, Any]] = []
         if isinstance(data, list):
-            return [self.embody(item) for item in data]
+            _data = [self.embody(item) for item in data]
         elif isinstance(data, dict):
-            return self._dict_to_object(data)
-
-        return data
+            _data = self._dict_to_object(data)
+        if len(_data) > 0 and isinstance(_data[0], list):
+            return [y for x in _data for y in x if len(x) > 0]
+        return _data
