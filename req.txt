@@ -1,4 +1,0 @@
-plotly
-requests
-jupyter
-numpy
