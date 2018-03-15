@@ -1,6 +1,6 @@
 import hashlib
 import json
-import logging
+from utils.logger import getLogger 
 import os
 import time
 from datetime import date, datetime
@@ -14,14 +14,7 @@ from .reddit.models.credentials import Credentials
 from .reddit.models.thingamajig import (COMMENTS_KEYS, HEADLINES_KEYS,
                                         ThingAMaJig)
 
-console = logging.StreamHandler()
-console.setLevel(logging.DEBUG)
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console.setFormatter(formatter)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(console)
+logger = getLogger(__name__)
 
 
 def _get_hash(item) -> str:
