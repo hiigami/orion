@@ -18,3 +18,13 @@ def cross_entropy(p, q, estimate=False):
 
 def softmax_cross_entropy(labels, logits, estimate=True):
     return cross_entropy(labels, softmax(logits), estimate)
+
+def rss(o, y):
+    # https://en.wikipedia.org/wiki/Residual_sum_of_squares
+    er = np.power(y - o, 2)
+    return np.sum(er, axis=1)
+
+def mse(o, y):
+    # https://en.wikipedia.org/wiki/Mean_squared_error#Regression
+    N = np.asarray([len(y_i) for y_i in y])
+    return rss(o, y) / N

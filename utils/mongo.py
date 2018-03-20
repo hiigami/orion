@@ -1,5 +1,5 @@
 import os
-
+import pandas as pd
 from pymongo import MongoClient
 
 
@@ -31,3 +31,24 @@ def get_connection():
     if MONGO_DB == "":
         return MongoClient(connection_url)
     return MongoClient(connection_url)[MONGO_DB]
+
+
+def get_dataframe(collection, query=None, chunksize=1000, page_num=0 no_id=True):
+    """
+    Read from Mongo and Store into a Panda's DataFrame
+    """
+    db = get_connection()
+    skips = chunksize * page_num
+    
+    if not query:
+        query = {}
+    cursor = db[collection].find(query).skip(skips).limit(chunksize)
+
+    df =  pd.DataFrame(list(cursor))
+
+    if no_id:
+        del df['_id']
+
+    return df
+
+
