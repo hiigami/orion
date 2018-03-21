@@ -110,3 +110,6 @@ env.sh
 
 # pickle
 *.pkl
+
+# temp files
+*tmp*
