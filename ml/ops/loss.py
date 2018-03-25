@@ -1,10 +1,6 @@
 import numpy as np
 
-
-def softmax(z):
-    # https://en.wikipedia.org/wiki/Softmax_function
-    logits_exp = np.exp(z - np.max(z, axis=1, keepdims=True))
-    return logits_exp / np.sum(logits_exp, axis=1, keepdims=True)
+from ml.ops.activation import Softmax
 
 
 def cross_entropy(p, q, estimate=False):
@@ -16,5 +12,5 @@ def cross_entropy(p, q, estimate=False):
     return -1.0 * p_log_q
 
 
-def softmax_cross_entropy(labels, logits, estimate=True):
-    return cross_entropy(labels, softmax(logits), estimate)
+def softmax_cross_entropy(labels, logits):
+    return cross_entropy(labels, Softmax.probability(logits), True)
