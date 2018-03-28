@@ -66,28 +66,27 @@ class RNN:
         N = np.sum((len(y_i) for y_i in y))
         return self._calculate_total_loss(x,y)/N
 
-    def calculate_loss(self, x, y):
+    def _calculate_total_loss(self, x, y):
+        L = np.asarray([])
         # For each sentence...
-        # We just have one
         for i in np.arange(len(y)):
             o, s = self.forward_propagation(x[i])
             # We only care about our prediction of the "correct" words
-            diag = np.arange(len(y[i]))
-            o_predictions = o[diag, diag]
+            correct_word_predictions = o[np.arange(len(y[i])), y[i]]
+
+            # correct_word_predictions == o
+            er = np.power(y - correct_word_predictions, 2)
+            L.append(np.sum(er) / batch_size)
+
             # Add to the loss based on how off we were
-            # L += -1 * np.sum(np.log(o_predictions))
-            er = np.power(y[i] - o_predictions, 2) # ToDo
-            # np.sum(er)
+            # L += -1 * np.sum(np.log(correct_word_predictions))
+        return np.sum(L)
 
-            # https://en.wikipedia.org/wiki/Mean_squared_error#Regression
-            N = len(y[i])
-            return np.sum(er) / N
-
-        # return L
-
+    def calculate_loss(self, x, y):
+        # Divide the total loss by the number of training examples
         # N = np.sum((len(y_i) for y_i in y))
-        # return self._calculate_total_loss(x,y)/N
-        # return mse()
+        return self._calculate_total_loss(x,y)
+
 
     def bptt(self, x, y):
         T = len(y)
@@ -98,15 +97,15 @@ class RNN:
         dLdV = np.zeros(self.V.shape)
         dLdW = np.zeros(self.W.shape)
         delta_o = o
-        diag = np.arange(len(y))
-        delta_o[diag, diag] -= 1.
+        delta_o[np.arange(len(y)), y] -= 1.
         # For each output backwards...
         for t in np.arange(T)[::-1]:
             dLdV += np.outer(delta_o[t], s[t].T)
-
+            # Initial delta calculation
             delta_t = self.V.T.dot(delta_o[t]) * (1 - (s[t] ** 2))
             # Backpropagation through time (for at most self.bptt_truncate steps)
             for bptt_step in np.arange(max(0, t-self.bptt_truncate), t+1)[::-1]:
+                # print "Backpropagation step t=%d bptt step=%d " % (t, bptt_step)
                 dLdW += np.outer(delta_t, s[bptt_step-1])              
                 dLdU[:,x[bptt_step]] += delta_t
                 # Update delta for next step
