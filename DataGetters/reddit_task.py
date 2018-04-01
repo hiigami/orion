@@ -1,13 +1,12 @@
 import hashlib
 import json
-from utils.logger import getLogger 
 import os
 import time
 from datetime import date, datetime
 from typing import List
 
 import utils.mongo as mongo
-from utils.load_env import load
+from utils.logger import getLogger
 
 from .reddit.core import Reddit
 from .reddit.models.credentials import Credentials
@@ -103,7 +102,6 @@ def _main_loop(reddit: Reddit,
 
 
 def main(*args, **kwargs) -> None:
-    load()
     SLEEP = int(os.environ.get("REDDIT_SLEEP", 5))
     reddit = _reddit_conn()
     headlines = ThingAMaJig(HEADLINES_KEYS)
