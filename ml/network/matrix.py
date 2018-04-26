@@ -3,6 +3,24 @@ import decimal
 import numpy as np
 
 
+class InitFn(object):
+    __slots__ = (
+        "_kwargs",
+        "_init_fn"
+    )
+
+    def __init__(self, init_fn, **kwargs):
+        self._kwargs = kwargs
+        self._init_fn = init_fn
+
+    def __call__(self, shape, dtype=np.int32):
+        if "size" in self._kwargs:
+            if self._kwargs["size"] is None:
+                self._kwargs["size"] = shape
+            return self._init_fn(**self._kwargs).astype(dtype)
+        return self._init_fn(shape=shape, dtype=dtype, **self._kwargs)
+
+
 class Matrix(object):
 
     __slots__ = (
@@ -70,7 +88,7 @@ class Matrix(object):
         return tuple([x if x is not None else 1 for x in shape])
 
     def __call__(self, value):
-        if isinstance(value, np.ndarray):
+        if isinstance(value, (np.ndarray, Matrix,)):
             dims = len(self._shape) - len(value.shape)
             self._value = value
             if self._dtype != value.dtype:
@@ -81,7 +99,7 @@ class Matrix(object):
                     self._value = np.expand_dims(self._value, axis=_axis)
             elif dims < 0:
                 raise ValueError("Invalid number of dims: {0}, waitting for {1} dims."
-                                 .format(value.ndim, len(value.shape)))
+                                 .format(value.ndim, len(self._shape)))
         elif isinstance(value, (int, float, decimal.Decimal, np.number,)):
             self._value = np.full(self._shape, value, self._dtype)
         self._shape = self._value.shape
@@ -110,12 +128,20 @@ class Matrix(object):
 
     @property
     def T(self):
-        self._value = self._value.T
-        self._shape = self._value.shape
-        return self
+        _value = self._value.T
+        _m = Matrix(self._dtype, _value.shape, self._name)
+        _m(_value)
+        return _m
 
     def flatten(self, order='c'):
         return self._value.flatten(order)
 
     def argmax(self, **other):
         return np.argmax(self._value, **other)
+
+    def reverse(self):
+        if self._value.ndim == 1:
+            self._value = np.flipud(self._value)
+        else:
+            self._value = np.ascontiguousarray(self._value[::-1])
+        return self

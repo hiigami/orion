@@ -33,11 +33,9 @@ class Data(object):
             [1 if l == "positive" else 0 for l in labels.split()])
 
         self._int_map = [r[0:steps] for r in self._int_map if len(r) > 0]
-
-        review_lens = Counter([len(x) for x in self._int_map])
-
-        logger.info("Zero-length reviews: %s", review_lens[0])
-        logger.info("Maximum review length: %s", max(review_lens))
+        # Zero-length reviews: review_lens[0]
+        # Maximum review length: max(review_lens)
+        return Counter([len(x) for x in self._int_map])
 
     def separate_data(self, seq_len=200, split_frac_training=0.8, split_frac_test_val=0.5):
 
