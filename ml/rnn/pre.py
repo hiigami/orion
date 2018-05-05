@@ -3,11 +3,13 @@
 import numpy as np
 # import matplotlib.pyplot as plt
 import pandas as pd
+# Feature Scaling
+from sklearn.preprocessing import MinMaxScaler
 
 # Reading CSV file into training set
 tesla_data = pd.read_csv('ml/rnn/TSLA.csv')
 # Getting relevant feature
-tesla_data = tesla_data.iloc[:,1:2]
+tesla_data = tesla_data.iloc[:, 1:2]
 tesla_data = tesla_data.values[:1000]
 
 
@@ -19,11 +21,10 @@ tesla_data = tesla_data[:max_els]
 tesla_data = np.reshape(tesla_data, (-1, batch_size))
 
 # Dividing into 2 sets
-div = int(len(tesla_data) * 0.2) # TODO (jordycuan) set the percentage and validate
+# TODO (jordycuan) set the percentage and validate
+div = int(len(tesla_data) * 0.2)
 
 
-# Feature Scaling
-from sklearn.preprocessing import MinMaxScaler
 sc = MinMaxScaler()
 training_set = sc.fit_transform(tesla_data[:-div])
 test_set = sc.fit_transform(tesla_data[-div:])

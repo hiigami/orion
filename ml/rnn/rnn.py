@@ -1,15 +1,28 @@
-from datetime import datetime
-import numpy as np
 import sys
-from pre import *
+from datetime import datetime
+
+import numpy as np
+
 
 def softmax(x):
     xt = np.exp(x - np.max(x))
     return xt / np.sum(xt)
 
+
+def softmax_dev(z):
+    z = z.astype(np.dtype('Float64'))
+    logits_exp = np.exp(z - np.max(z, axis=1, keepdims=True))
+    div = np.sum(logits_exp, axis=1, keepdims=True)
+    logits_exp_1 = logits_exp[:, 0]
+    logits_exp_2 = logits_exp[:, 1:]
+    logits_exp_2 = np.sum(logits_exp_2, axis=1, keepdims=True)
+    return (logits_exp_1 * logits_exp_2) / np.square(div)
+
+
 def rss(o, y):
     er = np.power(y - o, 2)
     return np.sum(er, axis=1)
+
 
 def mse(o, y):
     # https://en.wikipedia.org/wiki/Mean_squared_error#Regression
@@ -18,136 +31,116 @@ def mse(o, y):
 
 
 class RNN:
-    def __init__(self, input_dim, hidden_dim=100, bptt_truncate=4):
+    def __init__(self, batch_size, input_dim):
 
         self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.bptt_truncate = bptt_truncate
 
-        self.U = np.random.uniform(-np.sqrt(1./input_dim), np.sqrt(1./input_dim), (hidden_dim, input_dim))
-        self.V = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (input_dim, hidden_dim))
-        self.W = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (hidden_dim, hidden_dim))
+        self.b = np.random.uniform(0, 1.0, (1, input_dim,))
+        self.w = np.random.uniform(0, 1.0, (batch_size, input_dim,))
 
-    def forward_propagation(self, x):
-        # The total number of time steps
-        T = len(x)
-        # During forward propagation we save all hidden states in s because need them later.
-        # We add one additional element for the initial hidden, which we set to 0
-        s = np.zeros((T, self.hidden_dim))
-        # s = np.zeros((T + 1, self.hidden_dim))
-        s[-1] = np.zeros(self.hidden_dim)
-        # The outputs at each time step. Again, we save them for later.
-        o = np.zeros((T, self.input_dim))
-        # For each time step...
-        for t in np.arange(T):
-            # Note that we are indxing U by x[t]. This is the same as multiplying U with a one-hot vector.
-            s[t] = np.tanh(self.U[:,t] + self.W.dot(s[t-1]))
-            o[t] = softmax(self.V.dot(s[t]))
-        return [o, s]
-
-    def predict(self, x):
-        # Perform forward propagation and return index of the highest score
-        o, s = self.forward_propagation(x)
-        return np.argmax(o, axis=1)
-
-    def _old_calculate_total_loss(self, x, y):
-        L = 0
-        # For each sentence...
-        for i in np.arange(len(y)):
-            o, s = self.forward_propagation(x[i])
-            # We only care about our prediction of the "correct" words
-            correct_word_predictions = o[np.arange(len(y[i])), y[i]]
-            # Add to the loss based on how off we were
-            L += -1 * np.sum(np.log(correct_word_predictions))
-        return L
- 
-    def _old_calculate_loss(self, x, y):
-        # Divide the total loss by the number of training examples
-        N = np.sum((len(y_i) for y_i in y))
-        return self._calculate_total_loss(x,y)/N
-
-    def _calculate_total_loss(self, x, y):
-        L = np.asarray([])
-        # For each sentence...
-        for i in np.arange(len(y)):
-            o, s = self.forward_propagation(x[i])
-            # We only care about our prediction of the "correct" words
-            correct_word_predictions = o[np.arange(len(y[i])), y[i]]
-
-            # correct_word_predictions == o
-            er = np.power(y - correct_word_predictions, 2)
-            L.append(np.sum(er) / batch_size)
-
-            # Add to the loss based on how off we were
-            # L += -1 * np.sum(np.log(correct_word_predictions))
-        return np.sum(L)
-
+        self.b2 = np.random.uniform(0, 1.0, (1, input_dim,))
+        self.w2 = np.random.uniform(0, 1.0, (batch_size, input_dim,))
+    
     def calculate_loss(self, x, y):
-        # Divide the total loss by the number of training examples
-        # N = np.sum((len(y_i) for y_i in y))
-        return self._calculate_total_loss(x,y)
+        return np.square(x - y).mean()
 
+    def zero_state(self, batch_size):
+        return np.zeros((batch_size, self.input_dim,), dtype=np.dtype('Float32'))
 
-    def bptt(self, x, y):
-        T = len(y)
-        # Perform forward propagation
-        o, s = self.forward_propagation(x)
-        # We accumulate the gradients in these variables
-        dLdU = np.zeros(self.U.shape)
-        dLdV = np.zeros(self.V.shape)
-        dLdW = np.zeros(self.W.shape)
-        delta_o = o
-        delta_o[np.arange(len(y)), y] -= 1.
-        # For each output backwards...
-        for t in np.arange(T)[::-1]:
-            dLdV += np.outer(delta_o[t], s[t].T)
-            # Initial delta calculation
-            delta_t = self.V.T.dot(delta_o[t]) * (1 - (s[t] ** 2))
-            # Backpropagation through time (for at most self.bptt_truncate steps)
-            for bptt_step in np.arange(max(0, t-self.bptt_truncate), t+1)[::-1]:
-                # print "Backpropagation step t=%d bptt step=%d " % (t, bptt_step)
-                dLdW += np.outer(delta_t, s[bptt_step-1])              
-                dLdU[:,x[bptt_step]] += delta_t
-                # Update delta for next step
-                delta_t = self.W.T.dot(delta_t) * (1 - s[bptt_step-1] ** 2)
-        return [dLdU, dLdV, dLdW]
+    def forward(self, inputs, h_min_1):
+        aa = np.add(
+            np.multiply(self.w, inputs),
+            np.multiply(self.w, h_min_1)
+        )
+        bb = np.add(
+            aa,
+            self.b
+        )
+        output = np.tanh(bb)
+        return output, output
 
-    # Performs one step of SGD.
-    def sgd_step(self, x, y, learning_rate):
-        # Calculate the gradients
-        dLdU, dLdV, dLdW = self.bptt(x, y)
-        # Change parameters according to gradients and learning rate
-        self.U -= learning_rate * dLdU
-        self.V -= learning_rate * dLdV
-        self.W -= learning_rate * dLdW
-     
-    # Outer SGD Loop
-    # - model: The RNN model instance
-    # - X_train: The training data set
-    # - y_train: The training data labels
-    # - learning_rate: Initial learning rate for SGD
-    # - nepoch: Number of times to iterate through the complete dataset
-    # - evaluate_loss_after: Evaluate the loss after this many epochs
-    def train_with_sgd(self, X_train, y_train, learning_rate=0.005, nepoch=100, evaluate_loss_after=5):
-        # We keep track of the losses so we can plot them later
-        losses = []
-        num_examples_seen = 0
+    def forward_propagation(self, inputs, initial_state):
+        return self.forward(inputs, initial_state)
+
+    def bptt(self, output, h, error):
+        aa = np.add(
+            np.multiply(self.w, output),
+            np.multiply(self.w, h)
+        )
+        bb = np.add(
+            aa,
+            self.b
+        )
+        _output = np.tanh(bb)
+        d_b = error * _output
+        d_w = d_b * output
+        return (_output, d_w, d_b)
+
+    def sgd_step(self, x, state, cost, learning_rate):
+        output = softmax_dev(
+            np.add(np.multiply(self.w2, x), self.b2))
+        d_b2 = cost * output[:,:self.b2.shape[1]]
+        d_w2 = d_b2[:,:self.w2.shape[1]] * x
+        self.w2 -= learning_rate * d_w2
+        self.b2 -= learning_rate * d_b2[:1, :]
+
+        o, d_w, d_b = self.bptt(output[:,:self.b2.shape[1]], state, cost)
+        self.w -= learning_rate * d_w
+        self.b -= learning_rate * d_b[:1, :]
+
+    def validation(self, labels, predictions):
+        correct_prediction = (np.argmax(predictions, 1) == np.argmax(
+            labels, 1)).astype(np.dtype('Float32'))
+        return np.mean(correct_prediction)
+
+    def validate(self, num_batches, batch_size, inputs, labels):
+        state = self.zero_state(batch_size)
+        accuracy = []
+        total = len(inputs) - 1
+        for index in range(num_batches):
+            ii = total - index
+            inputs_batch = inputs[ii]
+            labels_batch = labels[ii]
+            outputs, final_states = self.forward_propagation(inputs_batch, state)
+            final_output = softmax(
+                    np.add(np.multiply(self.w2, outputs), self.b2))
+            accuracy.append(self.validation(labels_batch, final_output))
+        return np.mean(accuracy)
+
+    def train_with_sgd(self,
+                       inputs,
+                       labels,
+                       num_batches,
+                       num_batches_validate,
+                       batch_size,
+                       learning_rate=0.005,
+                       nepoch=100):
+        steps_count = 0
         for epoch in range(nepoch):
-            # Optionally evaluate the loss
-            if (epoch % evaluate_loss_after == 0):
-                loss = self.calculate_loss(X_train, y_train)
-                losses.append((num_examples_seen, loss))
-                time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                print("%s: Loss after num_examples_seen=%d epoch=%d: %f" % (time, num_examples_seen, epoch, loss))
-                # Adjust the learning rate if loss increases
-                if (len(losses) > 1 and losses[-1][1] > losses[-2][1]):
-                    learning_rate = learning_rate * 0.5 
-                    print("Setting learning rate to %f" % learning_rate)
-                sys.stdout.flush()
-            # For each training example...
-            for i in range(len(y_train)):
-                # One SGD step
-                self.sgd_step(X_train[i], y_train[i], learning_rate)
-                num_examples_seen += 1
-        return losses
+            state = self.zero_state(batch_size)
+            for index in range(num_batches):
+                inputs_batch = inputs[index]
+                labels_batch = labels[index]
+                outputs, final_states = self.forward_propagation(inputs_batch, state)
+                final_output = softmax(
+                    np.add(np.multiply(self.w2, outputs), self.b2))
+                cost = self.calculate_loss(labels_batch, final_output)
 
+                self.sgd_step(final_output, final_states, cost, learning_rate)
+                steps_count = steps_count + 1
+                if steps_count % 5 == 0:
+                    print("steps_count: ", steps_count)
+                    print("cost: ", cost)
+                    if steps_count % 25 == 0:
+                        accuracy = self.validate(num_batches_validate,
+                                                 batch_size,
+                                                 inputs,
+                                                 labels)
+                        print("--------------------")
+                        print("accuracy: ", accuracy)
+                        print("--------------------")
+        # ---- Example    -----
+        # Apply new model and get prediction
+        o, s = self.forward_propagation(inputs[1], self.zero_state(batch_size))
+        print([o[i, x] for i, x in enumerate(np.argmax(o, 1).astype(np.int32))])
+        # ---- Example End -----
