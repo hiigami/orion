@@ -76,7 +76,7 @@ class Layer(object):
 
     def apply_layer(self, inputs):
         # region logits
-        output = np.dot(inputs, self._weights) + self._bias
+        output = np.dot(inputs, self._weights)
         bias_broadcastable = array.broadcast_attempt(output, self._bias)
         output = output + bias_broadcastable
         # endregion
